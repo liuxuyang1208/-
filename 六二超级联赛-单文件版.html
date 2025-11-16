@@ -1,0 +1,2346 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#1e3c72">
+    <title>六二超级联赛 - 赛事查看系统</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .page {
+            display: none;
+            min-height: 100vh;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .page.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+            animation: fadeInUp 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* 主页面样式 */
+        .header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .csl-title-logo {
+            display: flex;
+            align-items: center;
+        }
+
+        .title-logo-circle {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #d40000 0%, #ff0000 50%, #d40000 100%);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            border: 2px solid #ffcc00;
+            box-shadow: 0 2px 8px rgba(212, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        .title-logo-text {
+            font-size: 11px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            letter-spacing: 0.5px;
+            font-family: 'Arial', sans-serif;
+            z-index: 2;
+            position: relative;
+        }
+
+        .title-logo-star {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            color: #ffcc00;
+            font-size: 7px;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.5);
+            z-index: 2;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            color: #1e3c72;
+        }
+
+        .network-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .status-indicator.online {
+            background: #4CAF50;
+        }
+
+        .status-indicator.offline {
+            background: #f44336;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+        }
+
+        .network-btn, .admin-btn, .logout-btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .network-btn:hover, .admin-btn:hover, .logout-btn:hover {
+            background: #2a5298;
+            transform: translateY(-1px);
+        }
+
+        .content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .news-section, .standings-section, .recent-matches, .top-scorers {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .news-section:hover, .standings-section:hover, .recent-matches:hover, .top-scorers:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .news-section h2, .standings-section h2, .recent-matches h2, .top-scorers h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .news-section h2::before {
+            content: '📰';
+            font-size: 1.2em;
+        }
+
+        .standings-section h2::before {
+            content: '🏆';
+            font-size: 1.2em;
+        }
+
+        .recent-matches h2::before {
+            content: '⚽';
+            font-size: 1.2em;
+        }
+
+        .top-scorers h2::before {
+            content: '👟';
+            font-size: 1.2em;
+        }
+
+        .standings-table {
+            width: 100%;
+        }
+
+        .table-header {
+            display: grid;
+            grid-template-columns: 50px 1fr repeat(7, 60px) 70px;
+            gap: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .table-body {
+            margin-top: 10px;
+        }
+
+        .team-row {
+            display: grid;
+            grid-template-columns: 50px 1fr repeat(7, 60px) 70px;
+            gap: 10px;
+            padding: 15px 10px;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .team-row:hover {
+            background: #f8f9fa;
+        }
+
+        .team-row.champion {
+            background: linear-gradient(90deg, rgba(255,215,0,0.1), transparent);
+            border-left: 4px solid gold;
+        }
+
+        .team {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .team-logo {
+            font-size: 1.5em;
+        }
+
+        .stats, .points {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .points {
+            color: #1e3c72;
+            font-size: 1.1em;
+        }
+
+        .matches-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .match-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #1e3c72;
+        }
+
+        .match-teams {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .team-name {
+            font-weight: bold;
+            flex: 1;
+        }
+
+        .match-score {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin: 0 20px;
+        }
+
+        .match-info {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .scorers-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .scorer-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .scorer-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .scorer-rank {
+            width: 25px;
+            height: 25px;
+            background: #1e3c72;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .scorer-name {
+            font-weight: bold;
+        }
+
+        .scorer-team {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .scorer-goals {
+            font-weight: bold;
+            color: #1e3c72;
+        }
+
+        /* 新闻样式 */
+        .news-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .news-item {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #1e3c72;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .news-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            border-left-color: #ff6b6b;
+        }
+
+        .news-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .news-type {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .news-type.important {
+            background: #ff6b6b;
+            color: white;
+        }
+
+        .news-type.normal {
+            background: #4ecdc4;
+            color: white;
+        }
+
+        .news-date {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .news-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #1e3c72;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .news-content {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .news-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #888;
+        }
+
+        .news-author {
+            font-style: italic;
+        }
+
+        /* 新闻详情页面 */
+        .news-detail-header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .news-detail-content {
+            padding: 30px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .news-detail-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .news-detail-card .news-detail-header {
+            background: none;
+            box-shadow: none;
+            padding: 0;
+            margin-bottom: 20px;
+        }
+
+        .news-detail-card .news-type {
+            font-size: 14px;
+        }
+
+        .news-detail-card .news-title {
+            font-size: 2em;
+            margin: 20px 0;
+            color: #1e3c72;
+        }
+
+        .news-detail-card .news-content {
+            font-size: 1.1em;
+            line-height: 1.8;
+            color: #333;
+            -webkit-line-clamp: unset;
+            display: block;
+        }
+
+        .news-detail-card .news-footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        /* 球队阵容页面 */
+        .squad-header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .back-btn {
+            width: 40px;
+            height: 40px;
+            background: #1e3c72;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            background: #2a5298;
+            transform: scale(1.1);
+        }
+
+        .squad-content {
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .football-field {
+            background: #2e7d32;
+            border: 5px solid white;
+            border-radius: 15px;
+            position: relative;
+            height: 400px;
+            margin-bottom: 20px;
+        }
+
+        .field {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            border: 2px solid white;
+        }
+
+        .goal {
+            position: absolute;
+            width: 2px;
+            height: 80px;
+            background: white;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .goal-left {
+            left: 0;
+        }
+
+        .goal-right {
+            right: 0;
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            border: 2px solid white;
+            border-radius: 50%;
+        }
+
+        .center-spot {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 10px;
+            height: 10px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        .penalty-area {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 80px;
+            height: 200px;
+            border: 2px solid white;
+        }
+
+        .penalty-left {
+            left: 0;
+        }
+
+        .penalty-right {
+            right: 0;
+        }
+
+        .players-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-position {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background: #1e3c72;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            border: 2px solid white;
+            transform: translate(-50%, -50%);
+        }
+
+        .player-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .player-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .player-number {
+            width: 30px;
+            height: 30px;
+            background: #1e3c72;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .player-name {
+            font-weight: bold;
+        }
+
+        .player-position-text {
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* 管理员登录页面 */
+        .admin-login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+        }
+
+        .admin-logo {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .admin-logo h2 {
+            font-size: 2em;
+        }
+
+        #admin-login-form {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 25px;
+        }
+
+        .input-group i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 15px 15px 15px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+
+        .admin-login-btn {
+            width: 100%;
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .admin-login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(30,60,114,0.3);
+        }
+
+        .admin-header {
+            background: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .admin-header h2 {
+            color: #1e3c72;
+        }
+
+        .admin-content {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .admin-section {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .admin-section h3 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+        }
+
+        .editor-item {
+            display: grid;
+            grid-template-columns: 150px repeat(7, 1fr);
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .editor-label {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .editor-input, .editor-textarea {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+
+        .editor-input:focus, .editor-textarea:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 3px rgba(30, 60, 114, 0.1);
+        }
+
+        .editor-textarea {
+            resize: vertical;
+            min-height: 80px;
+            line-height: 1.5;
+        }
+
+        .vs-text {
+            text-align: center;
+            font-weight: bold;
+            color: #666;
+            font-size: 1.2em;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        .save-btn, .reset-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .save-btn {
+            background: #4CAF50;
+            color: white;
+        }
+
+        .save-btn:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .reset-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .reset-btn:hover {
+            background: #da190b;
+            transform: translateY(-2px);
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border-left: 4px solid #c62828;
+            font-size: 14px;
+        }
+
+        /* 响应式设计 */
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 10px;
+                text-align: center;
+                padding: 10px 15px;
+            }
+            
+            .title-section {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .header-actions {
+                justify-content: center;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .table-header, .team-row {
+                grid-template-columns: 30px 1fr repeat(4, 40px) 50px;
+                font-size: 11px;
+                gap: 5px;
+                padding: 8px 5px;
+            }
+            
+            .table-header .stats:nth-child(6),
+            .table-header .stats:nth-child(7),
+            .table-header .stats:nth-child(8),
+            .team-row .stats:nth-child(6),
+            .team-row .stats:nth-child(7),
+            .team-row .stats:nth-child(8) {
+                display: none;
+            }
+            
+            .editor-item {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            
+            .match-info {
+                flex-direction: column;
+                gap: 5px;
+                font-size: 12px;
+            }
+            
+            .football-field {
+                height: 250px;
+            }
+            
+            .content {
+                padding: 10px;
+            }
+            
+            .news-section, .standings-section, .recent-matches, .top-scorers {
+                padding: 15px;
+                margin-bottom: 15px;
+            }
+            
+            .news-container {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .player-list {
+                grid-template-columns: 1fr;
+            }
+            
+            .admin-content {
+                padding: 10px;
+            }
+            
+            .admin-section {
+                padding: 15px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .table-header, .team-row {
+                grid-template-columns: 25px 1fr repeat(3, 35px) 45px;
+                font-size: 10px;
+            }
+            
+            .table-header .stats:nth-child(5),
+            .team-row .stats:nth-child(5) {
+                display: none;
+            }
+            
+            .match-teams {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .match-score {
+                margin: 5px 0;
+            }
+            
+            .football-field {
+                height: 200px;
+            }
+            
+            .player-position {
+                width: 25px;
+                height: 25px;
+                font-size: 10px;
+            }
+            
+            .chat-section {
+                padding: 15px;
+            }
+            
+            .chat-container {
+                height: 250px;
+            }
+            
+            .chat-input-container {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .send-btn {
+                width: 100%;
+            }
+        }
+
+        /* 聊天室样式 */
+        .chat-section {
+            background: white;
+            margin-bottom: 20px;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .chat-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .chat-section h2 {
+            color: #1e3c72;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chat-section h2::before {
+            content: '💬';
+            font-size: 1.2em;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 300px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #1e3c72;
+        }
+
+        .send-btn {
+            background: #1e3c72;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .send-btn:hover {
+            background: #2a5298;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <!-- 主页面 -->
+    <div id="main-page" class="page active">
+        <!-- 顶部标题栏 -->
+        <div class="header">
+            <div class="title-section">
+                <div class="csl-title-logo">
+                    <div class="title-logo-circle">
+                        <div class="title-logo-text">CSL</div>
+                        <div class="title-logo-star">★</div>
+                    </div>
+                </div>
+                <h1>六二超级联赛</h1>
+                <div class="network-status">
+                    <span id="network-status-text">离线模式</span>
+                    <div class="status-indicator" id="network-indicator"></div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="network-btn" id="network-btn" title="检查网络连接">
+                    <span>🌐 检查网络</span>
+                </button>
+                <button class="admin-btn" id="admin-btn">
+                    <span>管理员模式</span>
+                </button>
+                <div class="logout-btn" id="logout-btn">
+                    <span>退出</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="content">
+            <!-- 六二足球新闻 -->
+            <div class="news-section">
+                <h2>六二足球新闻</h2>
+                <div class="news-container" id="news-container">
+                    <!-- 新闻数据将通过JS动态生成 -->
+                </div>
+            </div>
+
+            <!-- 赛事积分榜 -->
+            <div class="standings-section">
+                <h2>赛事积分榜</h2>
+                <div class="standings-table">
+                    <div class="table-header">
+                        <div class="rank">排名</div>
+                        <div class="team">球队</div>
+                        <div class="stats">场次</div>
+                        <div class="stats">胜</div>
+                        <div class="stats">平</div>
+                        <div class="stats">负</div>
+                        <div class="stats">进球</div>
+                        <div class="stats">失球</div>
+                        <div class="stats">净胜球</div>
+                        <div class="points">积分</div>
+                    </div>
+                    <div class="table-body" id="standings-body">
+                        <!-- 积分榜数据将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 最近比赛 -->
+            <div class="recent-matches">
+                <h2>最近比赛</h2>
+                <div class="matches-list" id="matches-list">
+                    <!-- 比赛数据将通过JS动态生成 -->
+                </div>
+            </div>
+
+            <!-- 射手榜 -->
+            <div class="top-scorers">
+                <h2>射手榜</h2>
+                <div class="scorers-list" id="scorers-list">
+                    <!-- 射手数据将通过JS动态生成 -->
+                </div>
+            </div>
+
+            <!-- 实时聊天室 -->
+            <div class="chat-section">
+                <h2>💬 实时聊天室</h2>
+                <div class="chat-container">
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" class="chat-input" placeholder="输入消息..." maxlength="100">
+                        <button id="send-chat" class="send-btn">发送</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 球队阵容页面 -->
+    <div id="team-squad-page" class="page">
+        <div class="squad-header">
+            <div class="back-btn" id="back-to-main">
+                ←
+            </div>
+            <h2 id="squad-team-name">球队阵容</h2>
+        </div>
+        <div class="squad-content">
+            <div class="football-field">
+                <div class="field">
+                    <div class="goal goal-left"></div>
+                    <div class="goal goal-right"></div>
+                    <div class="center-circle"></div>
+                    <div class="center-spot"></div>
+                    <div class="penalty-area penalty-left"></div>
+                    <div class="penalty-area penalty-right"></div>
+                    <div class="players-container" id="players-container">
+                        <!-- 球员位置将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+            <div class="player-list" id="player-list">
+                <!-- 球员列表将通过JS动态生成 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理员登录页面 -->
+    <div id="admin-login-page" class="page">
+        <div class="admin-login-container">
+            <div class="back-btn" id="back-to-main-admin">
+                ←
+            </div>
+            <div class="admin-logo">
+                <h2>管理员登录</h2>
+            </div>
+            <form id="admin-login-form">
+                <div class="input-group">
+                    <input type="password" id="admin-password" placeholder="请输入管理员密码" required>
+                </div>
+                <button type="submit" class="admin-login-btn">登录</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 新闻详情页面 -->
+    <div id="news-detail-page" class="page">
+        <div class="news-detail-header">
+            <div class="back-btn" id="back-to-main-from-news">
+                ←
+            </div>
+            <h2>新闻详情</h2>
+        </div>
+        <div class="news-detail-content">
+            <div class="news-detail-card">
+                <div class="news-detail-header">
+                    <span class="news-type" id="news-detail-type">赛事快讯</span>
+                    <span class="news-date" id="news-detail-date">2024-11-10</span>
+                </div>
+                <h1 class="news-title" id="news-detail-title">新闻标题</h1>
+                <div class="news-content" id="news-detail-content">新闻内容</div>
+                <div class="news-footer">
+                    <span class="news-author" id="news-detail-author">作者</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 管理员编辑页面 -->
+    <div id="admin-edit-page" class="page">
+        <div class="admin-header">
+            <div class="back-btn" id="back-to-main-from-admin">
+                ←
+            </div>
+            <h2>管理员模式 - 数据编辑</h2>
+        </div>
+        <div class="admin-content">
+            <div class="admin-section">
+                <h3>新闻数据编辑</h3>
+                <div class="news-editor" id="news-editor">
+                    <!-- 新闻编辑表单将通过JS动态生成 -->
+                </div>
+            </div>
+            <div class="admin-section">
+                <h3>球队数据编辑</h3>
+                <div class="team-editor" id="team-editor">
+                    <!-- 球队编辑表单将通过JS动态生成 -->
+                </div>
+            </div>
+            <div class="admin-section">
+                <h3>球员数据编辑</h3>
+                <div class="player-editor" id="player-editor">
+                    <!-- 球员编辑表单将通过JS动态生成 -->
+                </div>
+            </div>
+            <div class="admin-section">
+                <h3>射手榜数据编辑</h3>
+                <div class="scorer-editor" id="scorer-editor">
+                    <!-- 射手榜编辑表单将通过JS动态生成 -->
+                </div>
+            </div>
+            <div class="admin-section">
+                <h3>比赛数据编辑</h3>
+                <div class="match-editor" id="match-editor">
+                    <!-- 比赛编辑表单将通过JS动态生成 -->
+                </div>
+            </div>
+            <div class="admin-actions">
+                <button class="save-btn" id="save-data-btn">
+                    <span>保存数据</span>
+                </button>
+                <button class="reset-btn" id="reset-data-btn">
+                    <span>重置数据</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 应用状态管理
+        const appState = {
+            isAuthenticated: true, // 直接认证，无需密码
+            isAdminMode: false,
+            adminPassword: 'QAZWSX1092',
+            isOnline: false,
+            serverStatus: 'offline', // offline, connecting, online, error
+            serverUrl: '',
+            connectionType: 'local' // local, lan, public
+        };
+
+        // 聊天室功能
+        const chatRoom = {
+            messages: [],
+            userId: 'user_' + Math.random().toString(36).substr(2, 9),
+            userName: '用户' + Math.floor(Math.random() * 1000)
+        };
+
+        // 默认联赛数据
+        const defaultLeagueData = {
+            news: [
+                {
+                    id: 1,
+                    title: '六二超级联赛正式开赛！',
+                    content: '六二班足球联赛正式拉开帷幕，三支球队将展开激烈角逐，争夺冠军荣誉！',
+                    date: '2024-11-01',
+                    author: '管理员',
+                    type: '重要通知'
+                },
+                {
+                    id: 2,
+                    title: '闪电队豪取三连胜',
+                    content: '闪电队在前三轮比赛中表现出色，以全胜战绩暂列积分榜首位。',
+                    date: '2024-11-05',
+                    author: '管理员',
+                    type: '赛事快讯'
+                },
+                {
+                    id: 3,
+                    title: '射手榜竞争激烈',
+                    content: '张三以8球领跑射手榜，李四和王五紧随其后，金靴奖争夺异常激烈。',
+                    date: '2024-11-10',
+                    author: '管理员',
+                    type: '球员动态'
+                }
+            ],
+            
+            teams: [
+                {
+                    id: 1,
+                    name: '闪电队',
+                    shortName: '闪电',
+                    logo: '⚡',
+                    played: 6,
+                    won: 4,
+                    drawn: 1,
+                    lost: 1,
+                    goalsFor: 12,
+                    goalsAgainst: 5,
+                    points: 13,
+                    squad: [
+                        { number: 1, name: '张三', position: 'GK', x: 10, y: 50 },
+                        { number: 2, name: '李四', position: 'DF', x: 25, y: 30 },
+                        { number: 3, name: '王五', position: 'FW', x: 60, y: 50 }
+                    ]
+                },
+                {
+                    id: 2,
+                    name: '猛虎队',
+                    shortName: '猛虎',
+                    logo: '🐯',
+                    played: 6,
+                    won: 3,
+                    drawn: 2,
+                    lost: 1,
+                    goalsFor: 10,
+                    goalsAgainst: 6,
+                    points: 11,
+                    squad: [
+                        { number: 1, name: '吴十', position: 'GK', x: 10, y: 50 },
+                        { number: 2, name: '郑十一', position: 'DF', x: 25, y: 30 },
+                        { number: 3, name: '孙十六', position: 'FW', x: 60, y: 50 }
+                    ]
+                },
+                {
+                    id: 3,
+                    name: '飞鹰队',
+                    shortName: '飞鹰',
+                    logo: '🦅',
+                    played: 6,
+                    won: 2,
+                    drawn: 1,
+                    lost: 3,
+                    goalsFor: 8,
+                    goalsAgainst: 9,
+                    points: 7,
+                    squad: [
+                        { number: 1, name: '吕昊梁', position: 'GK', x: 10, y: 50 },
+                        { number: 2, name: '后卫', position: 'DF', x: 25, y: 30 },
+                        { number: 3, name: '刘旭阳', position: 'FW', x: 60, y: 50 }
+                    ]
+                }
+            ],
+            
+            recentMatches: [
+                {
+                    id: 1,
+                    homeTeam: '闪电队',
+                    awayTeam: '猛虎队',
+                    homeScore: 2,
+                    awayScore: 1,
+                    date: '2024-11-10',
+                    time: '15:00',
+                    venue: '学校操场'
+                },
+                {
+                    id: 2,
+                    homeTeam: '飞鹰队',
+                    awayTeam: '闪电队',
+                    homeScore: 0,
+                    awayScore: 3,
+                    date: '2024-11-08',
+                    time: '16:30',
+                    venue: '学校操场'
+                },
+                {
+                    id: 3,
+                    homeTeam: '猛虎队',
+                    awayTeam: '飞鹰队',
+                    homeScore: 2,
+                    awayScore: 2,
+                    date: '2024-11-05',
+                    time: '14:00',
+                    venue: '学校操场'
+                }
+            ],
+            
+            topScorers: [
+                {
+                    rank: 1,
+                    name: '张三',
+                    team: '闪电队',
+                    goals: 8,
+                    assists: 3
+                },
+                {
+                    rank: 2,
+                    name: '李四',
+                    team: '猛虎队',
+                    goals: 6,
+                    assists: 4
+                },
+                {
+                    rank: 3,
+                    name: '王五',
+                    team: '飞鹰队',
+                    goals: 5,
+                    assists: 2
+                }
+            ]
+        };
+
+        // 当前联赛数据
+        let leagueData = { ...defaultLeagueData };
+
+        // 更新网络状态显示
+        function updateNetworkStatus(status, connectionType = 'local') {
+            const statusText = document.getElementById('network-status-text');
+            const indicator = document.getElementById('network-indicator');
+            
+            appState.serverStatus = status;
+            appState.connectionType = connectionType;
+            
+            switch (status) {
+                case 'online':
+                    statusText.textContent = connectionType === 'public' ? '🌐 公网连接' : 
+                                           connectionType === 'lan' ? '🏠 局域网连接' : '💻 本地连接';
+                    indicator.className = 'status-indicator online';
+                    appState.isOnline = true;
+                    break;
+                case 'connecting':
+                    statusText.textContent = '🔄 连接服务器...';
+                    indicator.className = 'status-indicator offline';
+                    appState.isOnline = false;
+                    break;
+                case 'error':
+                    statusText.textContent = '❌ 连接失败';
+                    indicator.className = 'status-indicator offline';
+                    appState.isOnline = false;
+                    break;
+                default:
+                    statusText.textContent = '📴 服务器离线';
+                    indicator.className = 'status-indicator offline';
+                    appState.isOnline = false;
+            }
+        }
+
+        // 检测服务器状态
+        async function checkServerStatus(serverUrl) {
+            updateNetworkStatus('connecting');
+            
+            try {
+                const response = await fetch(`${serverUrl}/api/health`, {
+                    method: 'GET',
+                    timeout: 5000
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    appState.serverUrl = serverUrl;
+                    
+                    // 判断连接类型
+                    let connectionType = 'local';
+                    if (serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1')) {
+                        connectionType = 'local';
+                    } else if (serverUrl.includes('192.168.') || serverUrl.includes('10.') || serverUrl.includes('172.')) {
+                        connectionType = 'lan';
+                    } else {
+                        connectionType = 'public';
+                    }
+                    
+                    updateNetworkStatus('online', connectionType);
+                    console.log('服务器连接成功:', data);
+                    return true;
+                } else {
+                    updateNetworkStatus('error');
+                    console.error('服务器响应错误:', response.status);
+                    return false;
+                }
+            } catch (error) {
+                updateNetworkStatus('error');
+                console.error('服务器连接失败:', error.message);
+                return false;
+            }
+        }
+
+        // 自动检测可用的服务器
+        async function autoDetectServer() {
+            const servers = [
+                'http://localhost:3000',
+                'http://127.0.0.1:3000'
+            ];
+            
+            // 尝试获取局域网IP
+            try {
+                const response = await fetch('http://localhost:3000/api/network-info');
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.lanIP) {
+                        servers.push(`http://${data.lanIP}:3000`);
+                    }
+                }
+            } catch (error) {
+                // 忽略错误，继续尝试其他服务器
+            }
+            
+            for (const server of servers) {
+                const isConnected = await checkServerStatus(server);
+                if (isConnected) {
+                    return true;
+                }
+                
+                // 等待1秒再尝试下一个
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            updateNetworkStatus('offline');
+            return false;
+        }
+
+        // 手动检查网络连接
+        function manualCheckNetwork() {
+            const serverUrl = prompt('请输入服务器地址 (例如: http://192.168.1.100:3000):', appState.serverUrl || 'http://localhost:3000');
+            
+            if (serverUrl && serverUrl.trim()) {
+                checkServerStatus(serverUrl.trim());
+            }
+        }
+
+        // 数据持久化函数
+        function saveData() {
+            localStorage.setItem('footballLeagueData', JSON.stringify(leagueData));
+        }
+
+        async function loadData() {
+            // 首先尝试从服务器加载数据
+            if (appState.isOnline && appState.serverUrl) {
+                try {
+                    const response = await fetch(`${appState.serverUrl}/api/data`);
+                    if (response.ok) {
+                        const serverData = await response.json();
+                        leagueData = serverData;
+                        console.log('从服务器加载数据成功');
+                        
+                        // 同步到本地存储
+                        localStorage.setItem('footballLeagueData', JSON.stringify(leagueData));
+                        return;
+                    }
+                } catch (error) {
+                    console.log('服务器数据加载失败，使用本地数据:', error.message);
+                }
+            }
+            
+            // 如果服务器不可用，使用本地存储数据
+            const savedData = localStorage.getItem('footballLeagueData');
+            if (savedData) {
+                try {
+                    leagueData = JSON.parse(savedData);
+                    console.log('从本地存储加载数据成功');
+                } catch (error) {
+                    console.error('本地存储数据损坏，使用默认数据');
+                    leagueData = { ...defaultLeagueData };
+                    saveData();
+                }
+            } else {
+                console.log('本地存储无数据，使用默认数据');
+                leagueData = { ...defaultLeagueData };
+                saveData();
+            }
+        }
+
+        // 同步数据到服务器
+        async function syncDataToServer() {
+            if (!appState.isOnline || !appState.serverUrl) {
+                console.log('服务器不可用，跳过数据同步');
+                return false;
+            }
+            
+            try {
+                const response = await fetch(`${appState.serverUrl}/api/data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(leagueData)
+                });
+                
+                if (response.ok) {
+                    console.log('数据同步到服务器成功');
+                    return true;
+                } else {
+                    console.error('数据同步失败:', response.status);
+                    return false;
+                }
+            } catch (error) {
+                console.error('数据同步错误:', error.message);
+                return false;
+            }
+        }
+
+        // 页面切换函数
+        function showPage(pageId) {
+            const currentPage = document.querySelector('.page.active');
+            const nextPage = document.getElementById(pageId);
+            
+            if (currentPage && currentPage !== nextPage) {
+                // 添加淡出动画
+                currentPage.style.opacity = '0';
+                currentPage.style.transform = 'translateY(-20px)';
+                
+                setTimeout(() => {
+                    currentPage.classList.remove('active');
+                    
+                    // 显示新页面
+                    nextPage.classList.add('active');
+                    
+                    // 触发重排以应用动画
+                    void nextPage.offsetWidth;
+                    
+                    // 添加淡入动画
+                    nextPage.style.opacity = '1';
+                    nextPage.style.transform = 'translateY(0)';
+                    
+                    // 如果是主页面，确保渲染数据
+                    if (pageId === 'main-page' && appState.isAuthenticated) {
+                        renderLeagueData();
+                    }
+                }, 300);
+            } else if (!currentPage) {
+                // 首次显示页面
+                nextPage.classList.add('active');
+                nextPage.style.opacity = '1';
+                nextPage.style.transform = 'translateY(0)';
+                
+                // 如果是主页面，确保渲染数据
+                if (pageId === 'main-page' && appState.isAuthenticated) {
+                    renderLeagueData();
+                }
+            }
+        }
+
+        // 管理员登录功能
+        function handleAdminLogin(event) {
+            event.preventDefault();
+            
+            const password = document.getElementById('admin-password').value;
+            
+            // 清除之前的错误信息
+            const existingError = document.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+            
+            if (!password) {
+                showError('请输入管理员密码');
+                return;
+            }
+            
+            if (password === appState.adminPassword) {
+                appState.isAdminMode = true;
+                showPage('admin-edit-page');
+                renderAdminEditor();
+            } else {
+                showError('管理员密码错误');
+                // 清空密码框
+                document.getElementById('admin-password').value = '';
+                document.getElementById('admin-password').focus();
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = `${message}`;
+            
+            const currentPage = document.querySelector('.page.active');
+            const form = currentPage.querySelector('form');
+            if (form) {
+                form.appendChild(errorDiv);
+            }
+        }
+
+        // 渲染新闻
+        function renderNews() {
+            const newsContainer = document.getElementById('news-container');
+            
+            newsContainer.innerHTML = leagueData.news.map(news => {
+                const newsDate = new Date(news.date);
+                const formattedDate = newsDate.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                return `
+                    <div class="news-item" onclick="showNewsDetail(${news.id})">
+                        <div class="news-header">
+                            <span class="news-type ${news.type === '重要通知' ? 'important' : 'normal'}">${news.type}</span>
+                            <span class="news-date">${formattedDate}</span>
+                        </div>
+                        <h3 class="news-title">${news.title}</h3>
+                        <p class="news-content">${news.content}</p>
+                        <div class="news-footer">
+                            <span class="news-author">${news.author}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 显示新闻详情
+        function showNewsDetail(newsId) {
+            const news = leagueData.news.find(n => n.id === newsId);
+            if (!news) return;
+            
+            const newsDate = new Date(news.date);
+            const formattedDate = newsDate.toLocaleDateString('zh-CN', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            
+            document.getElementById('news-detail-title').textContent = news.title;
+            document.getElementById('news-detail-content').textContent = news.content;
+            document.getElementById('news-detail-date').textContent = formattedDate;
+            document.getElementById('news-detail-author').textContent = news.author;
+            document.getElementById('news-detail-type').textContent = news.type;
+            
+            showPage('news-detail-page');
+        }
+
+        // 渲染积分榜
+        function renderStandings() {
+            const standingsBody = document.getElementById('standings-body');
+            
+            // 按积分排序
+            const sortedTeams = [...leagueData.teams].sort((a, b) => b.points - a.points);
+            
+            standingsBody.innerHTML = sortedTeams.map((team, index) => {
+                const goalDifference = team.goalsFor - team.goalsAgainst;
+                const isChampion = index === 0 ? 'champion' : '';
+                
+                return `
+                    <div class="team-row ${isChampion}" onclick="showTeamSquad(${team.id})">
+                        <div class="rank">${index + 1}</div>
+                        <div class="team">
+                            <div class="team-logo">${team.logo}</div>
+                            <span>${team.name}</span>
+                        </div>
+                        <div class="stats">${team.played}</div>
+                        <div class="stats">${team.won}</div>
+                        <div class="stats">${team.drawn}</div>
+                        <div class="stats">${team.lost}</div>
+                        <div class="stats">${team.goalsFor}</div>
+                        <div class="stats">${team.goalsAgainst}</div>
+                        <div class="stats">${goalDifference > 0 ? '+' : ''}${goalDifference}</div>
+                        <div class="points">${team.points}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 渲染最近比赛
+        function renderRecentMatches() {
+            const matchesList = document.getElementById('matches-list');
+            
+            matchesList.innerHTML = leagueData.recentMatches.map(match => {
+                const matchDate = new Date(match.date);
+                const formattedDate = matchDate.toLocaleDateString('zh-CN', {
+                    month: 'short',
+                    day: 'numeric'
+                });
+                
+                return `
+                    <div class="match-item">
+                        <div class="match-teams">
+                            <div class="team-name">${match.homeTeam}</div>
+                            <div class="match-score">${match.homeScore} - ${match.awayScore}</div>
+                            <div class="team-name">${match.awayTeam}</div>
+                        </div>
+                        <div class="match-info">
+                            <span>📅 ${formattedDate}</span>
+                            <span>🕒 ${match.time}</span>
+                            <span>📍 ${match.venue}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 渲染射手榜
+        function renderTopScorers() {
+            const scorersList = document.getElementById('scorers-list');
+            
+            scorersList.innerHTML = leagueData.topScorers.map(scorer => {
+                return `
+                    <div class="scorer-item">
+                        <div class="scorer-info">
+                            <div class="scorer-rank">${scorer.rank}</div>
+                            <div>
+                                <div class="scorer-name">${scorer.name}</div>
+                                <div class="scorer-team">${scorer.team}</div>
+                            </div>
+                        </div>
+                        <div class="scorer-goals">${scorer.goals} 球</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 显示球队阵容
+        function showTeamSquad(teamId) {
+            const team = leagueData.teams.find(t => t.id === teamId);
+            if (!team) return;
+            
+            document.getElementById('squad-team-name').textContent = `${team.name} 阵容`;
+            renderTeamSquad(team);
+            showPage('team-squad-page');
+        }
+
+        // 渲染球队阵容
+        function renderTeamSquad(team) {
+            const playersContainer = document.getElementById('players-container');
+            const playerList = document.getElementById('player-list');
+            
+            // 清空容器，确保只显示实际的球员
+            playersContainer.innerHTML = '';
+            playerList.innerHTML = '';
+            
+            // 只渲染球队中实际存在的3个球员位置
+            team.squad.forEach(player => {
+                const playerElement = document.createElement('div');
+                playerElement.className = 'player-position';
+                playerElement.style.left = `${player.x}%`;
+                playerElement.style.top = `${player.y}%`;
+                playerElement.title = `${player.name} - ${getPositionName(player.position)}`;
+                playerElement.textContent = player.number;
+                playersContainer.appendChild(playerElement);
+                
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-item';
+                playerItem.innerHTML = `
+                    <div class="player-number">${player.number}</div>
+                    <div class="player-info">
+                        <div class="player-name">${player.name}</div>
+                        <div class="player-position-text">${getPositionName(player.position)}</div>
+                    </div>
+                `;
+                playerList.appendChild(playerItem);
+            });
+        }
+
+        // 获取位置名称
+        function getPositionName(position) {
+            const positions = {
+                'GK': '守门员',
+                'DF': '后卫',
+                'MF': '中场',
+                'FW': '前锋'
+            };
+            return positions[position] || position;
+        }
+
+        // 渲染所有联赛数据
+        function renderLeagueData() {
+            renderNews();
+            renderStandings();
+            renderRecentMatches();
+            renderTopScorers();
+        }
+
+        // 发送聊天消息
+        async function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            
+            if (message) {
+                const chatMessage = {
+                    id: Date.now(),
+                    user: chatRoom.userName,
+                    text: message,
+                    time: new Date().toLocaleTimeString()
+                };
+                
+                // 添加到本地聊天记录
+                chatRoom.messages.push(chatMessage);
+                
+                // 保存到本地存储
+                localStorage.setItem('chatMessages', JSON.stringify(chatRoom.messages));
+                
+                // 渲染消息
+                renderChatMessages();
+                
+                // 如果在线，发送到服务器
+                if (appState.isOnline && appState.serverUrl) {
+                    try {
+                        await fetch(`${appState.serverUrl}/api/chat/send`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                sender: chatRoom.userName,
+                                content: message
+                            })
+                        });
+                    } catch (error) {
+                        console.log('发送到服务器失败，使用本地聊天:', error.message);
+                    }
+                }
+                
+                // 清空输入框
+                input.value = '';
+                input.focus();
+            }
+        }
+
+        // 渲染聊天消息
+        function renderChatMessages() {
+            const container = document.getElementById('chat-messages');
+            container.innerHTML = '';
+            
+            chatRoom.messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.style.cssText = 'margin-bottom: 8px; padding: 5px; background: #f8f9fa; border-radius: 5px;';
+                messageDiv.innerHTML = `
+                    <strong>${msg.user}</strong> 
+                    <span style="color: #666; font-size: 12px;">${msg.time}</span><br>
+                    ${msg.text}
+                `;
+                container.appendChild(messageDiv);
+            });
+            
+            // 滚动到底部
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 加载聊天消息
+        function loadChatMessages() {
+            const savedMessages = localStorage.getItem('chatMessages');
+            if (savedMessages) {
+                chatRoom.messages = JSON.parse(savedMessages);
+            }
+            renderChatMessages();
+        }
+
+        // 渲染管理员编辑器
+        function renderAdminEditor() {
+            // 新闻数据编辑器
+            const newsEditor = document.getElementById('news-editor');
+            newsEditor.innerHTML = leagueData.news.map(news => {
+                return `
+                    <div class="editor-item">
+                        <div class="editor-label">新闻 ${news.id}</div>
+                        <input type="text" class="editor-input" value="${news.title}" data-news="${news.id}" data-field="title" placeholder="新闻标题">
+                        <textarea class="editor-textarea" data-news="${news.id}" data-field="content" placeholder="新闻内容">${news.content}</textarea>
+                        <input type="date" class="editor-input" value="${news.date}" data-news="${news.id}" data-field="date">
+                        <input type="text" class="editor-input" value="${news.author}" data-news="${news.id}" data-field="author" placeholder="作者">
+                        <select class="editor-input" data-news="${news.id}" data-field="type">
+                            <option value="重要通知" ${news.type === '重要通知' ? 'selected' : ''}>重要通知</option>
+                            <option value="赛事快讯" ${news.type === '赛事快讯' ? 'selected' : ''}>赛事快讯</option>
+                            <option value="球员动态" ${news.type === '球员动态' ? 'selected' : ''}>球员动态</option>
+                        </select>
+                    </div>
+                `;
+            }).join('');
+            
+            // 球队数据编辑器
+            const teamEditor = document.getElementById('team-editor');
+            teamEditor.innerHTML = leagueData.teams.map(team => {
+                return `
+                    <div class="editor-item">
+                        <div class="editor-label">${team.name}</div>
+                        <input type="number" class="editor-input" value="${team.played}" data-team="${team.id}" data-field="played" placeholder="场次">
+                        <input type="number" class="editor-input" value="${team.won}" data-team="${team.id}" data-field="won" placeholder="胜">
+                        <input type="number" class="editor-input" value="${team.drawn}" data-team="${team.id}" data-field="drawn" placeholder="平">
+                        <input type="number" class="editor-input" value="${team.lost}" data-team="${team.id}" data-field="lost" placeholder="负">
+                        <input type="number" class="editor-input" value="${team.goalsFor}" data-team="${team.id}" data-field="goalsFor" placeholder="进球">
+                        <input type="number" class="editor-input" value="${team.goalsAgainst}" data-team="${team.id}" data-field="goalsAgainst" placeholder="失球">
+                        <input type="number" class="editor-input" value="${team.points}" data-team="${team.id}" data-field="points" placeholder="积分">
+                    </div>
+                `;
+            }).join('');
+            
+            // 球员数据编辑器
+            const playerEditor = document.getElementById('player-editor');
+            playerEditor.innerHTML = leagueData.teams.map(team => {
+                return team.squad.map(player => {
+                    return `
+                        <div class="editor-item">
+                            <div class="editor-label">${team.name} - ${player.name}</div>
+                            <input type="number" class="editor-input" value="${player.number}" data-team="${team.id}" data-player="${player.number}" data-field="number" placeholder="号码">
+                            <input type="text" class="editor-input" value="${player.name}" data-team="${team.id}" data-player="${player.number}" data-field="name" placeholder="姓名">
+                            <select class="editor-input" data-team="${team.id}" data-player="${player.number}" data-field="position">
+                                <option value="GK" ${player.position === 'GK' ? 'selected' : ''}>守门员</option>
+                                <option value="DF" ${player.position === 'DF' ? 'selected' : ''}>后卫</option>
+                                <option value="FW" ${player.position === 'FW' ? 'selected' : ''}>前锋</option>
+                            </select>
+                            <input type="number" class="editor-input" value="${player.x}" data-team="${team.id}" data-player="${player.number}" data-field="x" placeholder="X位置">
+                            <input type="number" class="editor-input" value="${player.y}" data-team="${team.id}" data-player="${player.number}" data-field="y" placeholder="Y位置">
+                        </div>
+                    `;
+                }).join('');
+            }).join('');
+            
+            // 射手榜编辑器
+            const scorerEditor = document.getElementById('scorer-editor');
+            scorerEditor.innerHTML = leagueData.topScorers.map(scorer => {
+                return `
+                    <div class="editor-item">
+                        <div class="editor-label">射手 ${scorer.rank}</div>
+                        <input type="number" class="editor-input" value="${scorer.rank}" data-scorer="${scorer.rank}" data-field="rank" placeholder="排名">
+                        <input type="text" class="editor-input" value="${scorer.name}" data-scorer="${scorer.rank}" data-field="name" placeholder="姓名">
+                        <select class="editor-input" data-scorer="${scorer.rank}" data-field="team">
+                            ${leagueData.teams.map(team => 
+                                `<option value="${team.name}" ${team.name === scorer.team ? 'selected' : ''}>${team.name}</option>`
+                            ).join('')}
+                        </select>
+                        <input type="number" class="editor-input" value="${scorer.goals}" data-scorer="${scorer.rank}" data-field="goals" placeholder="进球数">
+                        <input type="number" class="editor-input" value="${scorer.assists}" data-scorer="${scorer.rank}" data-field="assists" placeholder="助攻数">
+                    </div>
+                `;
+            }).join('');
+            
+            // 比赛数据编辑器
+            const matchEditor = document.getElementById('match-editor');
+            matchEditor.innerHTML = leagueData.recentMatches.map(match => {
+                return `
+                    <div class="editor-item">
+                        <div class="editor-label">比赛 ${match.id}</div>
+                        <select class="editor-input" data-match="${match.id}" data-field="homeTeam">
+                            ${leagueData.teams.map(team => 
+                                `<option value="${team.name}" ${team.name === match.homeTeam ? 'selected' : ''}>${team.name}</option>`
+                            ).join('')}
+                        </select>
+                        <span class="vs-text">vs</span>
+                        <select class="editor-input" data-match="${match.id}" data-field="awayTeam">
+                            ${leagueData.teams.map(team => 
+                                `<option value="${team.name}" ${team.name === match.awayTeam ? 'selected' : ''}>${team.name}</option>`
+                            ).join('')}
+                        </select>
+                        <input type="number" class="editor-input" value="${match.homeScore}" data-match="${match.id}" data-field="homeScore" placeholder="主队进球">
+                        <input type="number" class="editor-input" value="${match.awayScore}" data-match="${match.id}" data-field="awayScore" placeholder="客队进球">
+                        <input type="date" class="editor-input" value="${match.date}" data-match="${match.id}" data-field="date">
+                        <input type="time" class="editor-input" value="${match.time}" data-match="${match.id}" data-field="time">
+                        <input type="text" class="editor-input" value="${match.venue}" data-match="${match.id}" data-field="venue" placeholder="场地">
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // 保存数据
+        function saveEditedData() {
+            // 更新新闻数据
+            const newsInputs = document.querySelectorAll('#news-editor .editor-input, #news-editor .editor-textarea');
+            newsInputs.forEach(input => {
+                const newsId = parseInt(input.getAttribute('data-news'));
+                const field = input.getAttribute('data-field');
+                const value = input.value;
+                
+                const news = leagueData.news.find(n => n.id === newsId);
+                if (news) {
+                    news[field] = value;
+                }
+            });
+            
+            // 更新新闻类型（处理下拉选择框）
+            const newsSelects = document.querySelectorAll('#news-editor select');
+            newsSelects.forEach(select => {
+                const newsId = parseInt(select.getAttribute('data-news'));
+                const field = select.getAttribute('data-field');
+                const value = select.value;
+                
+                const news = leagueData.news.find(n => n.id === newsId);
+                if (news) {
+                    news[field] = value;
+                }
+            });
+            
+            // 更新球队数据
+            const teamInputs = document.querySelectorAll('#team-editor .editor-input');
+            teamInputs.forEach(input => {
+                const teamId = parseInt(input.getAttribute('data-team'));
+                const field = input.getAttribute('data-field');
+                const value = parseInt(input.value) || 0;
+                
+                const team = leagueData.teams.find(t => t.id === teamId);
+                if (team) {
+                    team[field] = value;
+                }
+            });
+            
+            // 更新球员数据
+            const playerInputs = document.querySelectorAll('#player-editor .editor-input');
+            playerInputs.forEach(input => {
+                const teamId = parseInt(input.getAttribute('data-team'));
+                const playerNumber = parseInt(input.getAttribute('data-player'));
+                const field = input.getAttribute('data-field');
+                const value = input.value;
+                
+                const team = leagueData.teams.find(t => t.id === teamId);
+                if (team) {
+                    const player = team.squad.find(p => p.number === playerNumber);
+                    if (player) {
+                        if (field === 'number' || field === 'x' || field === 'y') {
+                            player[field] = parseInt(value) || 0;
+                        } else {
+                            player[field] = value;
+                        }
+                    }
+                }
+            });
+            
+            // 更新球员位置（处理下拉选择框）
+            const playerSelects = document.querySelectorAll('#player-editor select');
+            playerSelects.forEach(select => {
+                const teamId = parseInt(select.getAttribute('data-team'));
+                const playerNumber = parseInt(select.getAttribute('data-player'));
+                const field = select.getAttribute('data-field');
+                const value = select.value;
+                
+                const team = leagueData.teams.find(t => t.id === teamId);
+                if (team) {
+                    const player = team.squad.find(p => p.number === playerNumber);
+                    if (player) {
+                        player[field] = value;
+                    }
+                }
+            });
+            
+            // 更新射手榜数据
+            const scorerInputs = document.querySelectorAll('#scorer-editor .editor-input');
+            scorerInputs.forEach(input => {
+                const scorerRank = parseInt(input.getAttribute('data-scorer'));
+                const field = input.getAttribute('data-field');
+                const value = input.value;
+                
+                const scorer = leagueData.topScorers.find(s => s.rank === scorerRank);
+                if (scorer) {
+                    if (field === 'rank' || field === 'goals' || field === 'assists') {
+                        scorer[field] = parseInt(value) || 0;
+                    } else {
+                        scorer[field] = value;
+                    }
+                }
+            });
+            
+            // 更新射手榜球队（处理下拉选择框）
+            const scorerSelects = document.querySelectorAll('#scorer-editor select');
+            scorerSelects.forEach(select => {
+                const scorerRank = parseInt(select.getAttribute('data-scorer'));
+                const field = select.getAttribute('data-field');
+                const value = select.value;
+                
+                const scorer = leagueData.topScorers.find(s => s.rank === scorerRank);
+                if (scorer) {
+                    scorer[field] = value;
+                }
+            });
+            
+            // 更新比赛数据
+            const matchInputs = document.querySelectorAll('#match-editor .editor-input');
+            matchInputs.forEach(input => {
+                const matchId = parseInt(input.getAttribute('data-match'));
+                const field = input.getAttribute('data-field');
+                const value = input.value;
+                
+                const match = leagueData.recentMatches.find(m => m.id === matchId);
+                if (match) {
+                    match[field] = value;
+                }
+            });
+            
+            // 更新比赛对阵球队（处理下拉选择框）
+            const matchSelects = document.querySelectorAll('#match-editor select');
+            matchSelects.forEach(select => {
+                const matchId = parseInt(select.getAttribute('data-match'));
+                const field = select.getAttribute('data-field');
+                const value = select.value;
+                
+                const match = leagueData.recentMatches.find(m => m.id === matchId);
+                if (match) {
+                    match[field] = value;
+                }
+            });
+            
+            // 保存到本地存储
+            saveData();
+            
+            alert('数据保存成功！');
+            
+            // 返回主页面并刷新数据
+            appState.isAdminMode = false;
+            showPage('main-page');
+            renderLeagueData();
+        }
+
+        // 重置数据
+        async function resetData() {
+            if (confirm('确定要重置所有数据吗？这将恢复为初始状态。')) {
+                leagueData = { ...defaultLeagueData };
+                saveData();
+                
+                // 重置聊天室
+                chatRoom.messages = [];
+                localStorage.removeItem('chatMessages');
+                
+                // 如果在线，同步到服务器
+                if (appState.isOnline && appState.serverUrl) {
+                    try {
+                        await fetch(`${appState.serverUrl}/api/reset`, {
+                            method: 'POST'
+                        });
+                        console.log('服务器数据已重置');
+                    } catch (error) {
+                        console.log('服务器重置失败:', error.message);
+                    }
+                }
+                
+                renderAdminEditor();
+                renderChatMessages();
+                alert('数据已重置！');
+            }
+        }
+
+        // 退出登录
+        function logout() {
+            appState.isAuthenticated = false;
+            appState.isAdminMode = false;
+            showPage('main-page');
+        }
+
+        // 初始化事件监听器
+        function initEventListeners() {
+            // 网络检查按钮
+            document.getElementById('network-btn').addEventListener('click', manualCheckNetwork);
+            
+            // 管理员登录表单
+            document.getElementById('admin-login-form').addEventListener('submit', handleAdminLogin);
+            
+            // 管理员按钮
+            document.getElementById('admin-btn').addEventListener('click', function() {
+                showPage('admin-login-page');
+            });
+            
+            // 退出按钮
+            document.getElementById('logout-btn').addEventListener('click', logout);
+            
+            // 保存数据按钮
+            document.getElementById('save-data-btn').addEventListener('click', saveEditedData);
+            
+            // 重置数据按钮
+            document.getElementById('reset-data-btn').addEventListener('click', resetData);
+            
+            // 返回按钮
+            document.getElementById('back-to-main').addEventListener('click', function() {
+                showPage('main-page');
+            });
+            
+            document.getElementById('back-to-main-admin').addEventListener('click', function() {
+                showPage('main-page');
+            });
+            
+            document.getElementById('back-to-main-from-admin').addEventListener('click', function() {
+                appState.isAdminMode = false;
+                showPage('main-page');
+            });
+            
+            document.getElementById('back-to-main-from-news').addEventListener('click', function() {
+                showPage('main-page');
+            });
+            
+            // 回车键登录
+            document.getElementById('admin-password').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    handleAdminLogin(e);
+                }
+            });
+            
+            // 聊天功能
+            document.getElementById('send-chat').addEventListener('click', sendChatMessage);
+            
+            document.getElementById('chat-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendChatMessage();
+                }
+            });
+        }
+
+        // 页面加载完成后的初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            // 初始化事件监听器
+            initEventListeners();
+            
+            // 自动检测服务器
+            autoDetectServer().then(isConnected => {
+                if (isConnected) {
+                    console.log('服务器连接成功');
+                } else {
+                    console.log('服务器不可用，使用离线模式');
+                }
+                
+                // 加载数据
+                loadData().then(() => {
+                    // 渲染数据
+                    renderLeagueData();
+                    
+                    // 加载聊天消息
+                    loadChatMessages();
+                    
+                    console.log('六二超级联赛系统初始化完成！');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
